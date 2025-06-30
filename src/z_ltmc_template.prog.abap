@@ -1540,6 +1540,61 @@ FORM zf_adjust_xml .
           INTO gt_dataset INDEX vl_tabix + 1.
 
       ELSE.
+        READ TABLE tg_map INTO wl_map WITH KEY sfield  = vl_sfield.
+        IF wl_map-sfield IS NOT INITIAL.
+          PERFORM zf_val_pos_dom USING wl_map-tdata-domname CHANGING tl_valp vl_lines.
+
+        IF vl_lines GT 1.
+          READ TABLE gt_dataset ASSIGNING <fl_tagrow> INDEX vl_tabrow.
+
+          vl_lines = vl_lines * '13.2'.
+
+          REPLACE '<Row' IN <fl_tagrow> WITH |<Row ss:AutoFitHeight="0" ss:Height="{ vl_lines }"|.
+
+          INSERT |</Data></Cell>| INTO gt_dataset INDEX vl_tabix + 1.
+
+          CLEAR vl_index.
+          DO vl_lines TIMES.
+            vl_index = COND i( WHEN 1 = 1 THEN vl_lines - sy-index + 1 ).
+
+            READ TABLE tl_valp INTO wl_valp INDEX vl_index.
+
+            CHECK sy-subrc EQ 0.
+
+            INSERT |{ wl_valp-line }| INTO gt_dataset INDEX vl_tabix + 1.
+
+          ENDDO.
+
+          INSERT |<Cell ss:Index="15" ss:StyleID="FIELDLIST"><Data ss:Type="String">|
+            INTO gt_dataset INDEX vl_tabix + 1.
+
+        ELSEIF vl_lines EQ 1.
+          INSERT |<Cell ss:Index="15" ss:StyleID="FIELDLIST"><Data ss:Type="String">| &&
+                 |{ tl_valp[ 1 ]-line }</Data></Cell>|
+            INTO gt_dataset INDEX vl_tabix + 1.
+
+        ELSE.
+          INSERT |<Cell ss:Index="15" ss:StyleID="FIELDLIST"><Data ss:Type="String"></Data></Cell>|
+            INTO gt_dataset INDEX vl_tabix + 1.
+
+        ENDIF.
+
+        vl_len = COND string( WHEN wl_map-tdata-decs IS INITIAL THEN condense( |{ wl_map-tdata-outputlen ALPHA = OUT }| )
+                                    ELSE condense( |{ wl_map-tdata-outputlen ALPHA = OUT } dec { wl_map-tdata-decs ALPHA = OUT }| ) ).
+
+        INSERT |<Cell ss:Index="14" ss:StyleID="FIELDLIST"><Data ss:Type="String">| &&
+               |{ vl_len }</Data></Cell>|
+          INTO gt_dataset INDEX vl_tabix + 1.
+
+        INSERT |<Cell ss:Index="13" ss:StyleID="FIELDLIST"><Data ss:Type="String">{ wl_map-tdata-datatype }</Data></Cell>|
+          INTO gt_dataset INDEX vl_tabix + 1.
+
+        INSERT |<Cell ss:Index="12" ss:StyleID="FIELDLIST"><Data ss:Type="String">{ wl_map-tfield }&#10;({ wl_map-tdata-rollname })</Data></Cell>|
+          INTO gt_dataset INDEX vl_tabix + 1.
+
+        INSERT |<Cell ss:Index="11" ss:StyleID="FIELDLIST"><Data ss:Type="String">{ wl_map-tstruct }</Data></Cell>|
+          INTO gt_dataset INDEX vl_tabix + 1.
+        ELSE.
         INSERT |<Cell ss:Index="15" ss:StyleID="FIELDLIST"><Data ss:Type="String"></Data></Cell>|
           INTO gt_dataset INDEX vl_tabix + 1.
 
@@ -1554,7 +1609,7 @@ FORM zf_adjust_xml .
 
         INSERT |<Cell ss:Index="11" ss:StyleID="FIELDLIST"><Data ss:Type="String"></Data></Cell>|
           INTO gt_dataset INDEX vl_tabix + 1.
-
+       ENDIF.
       ENDIF.
 
       CLEAR: vl_sstruct, vl_sfield.
@@ -1792,6 +1847,7 @@ FORM zf_sel_screen .
 
   c_sprojt = wl_migr-sprjctt.
   c_objmgt = wl_migr-objmgt.
+  gv_ident = p_objmg.
 
 ENDFORM.
 *&---------------------------------------------------------------------*
